@@ -148,10 +148,11 @@
       <label class="field">입주(거주 시작) 연도<span><input id="movein" type="number" step="1" inputmode="numeric"></span></label>
       <h3>전세 (참고용)</h3>
       <label class="check"><input id="j_on" type="checkbox"><span>전세를 준다고 보고 계산하기</span></label>
-      <label class="field">전세 보증금<span><input id="j_dep" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+      <label class="field">받을 전세 보증금<span><input id="j_dep" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+      <label class="field">내가 살 집 전세금<span><input id="j_my" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
       <label class="field">전세 시작 연도<span><input id="j_from" type="number" step="1" inputmode="numeric"></span></label>
       <label class="field">전세 끝 연도<span><input id="j_to" type="number" step="1" inputmode="numeric"></span></label>
-      <label class="field">은행 이자율 (보증금 운용)<span><input id="j_rate" type="number" step="0.1" min="0" inputmode="decimal"> <span class="unit">%</span></span></label>
+      <label class="field">은행 이자율 (남는 돈 운용)<span><input id="j_rate" type="number" step="0.1" min="0" inputmode="decimal"> <span class="unit">%</span></span></label>
       <label class="check"><input id="j_tax" type="checkbox"><span>이자소득세 15.4%를 빼고 계산</span></label>
       <h3>월세 (참고용)</h3>
       <label class="check"><input id="w_on" type="checkbox"><span>월세를 준다고 보고 계산하기</span></label>
@@ -246,7 +247,7 @@
       <li>종부세: 공제 2026년 12억, 2027년부터 거주 14억·비거주는 위에서 고른 값. 공정시장가액비율 2026년 60%, 2027년부터 70%. 세율은 2026년 현행(최고 2.7%), 2027년 중간 단계(최고 3.5%), 2028년부터 가액 기준 일원화(최고 5%). 1주택 세액공제는 2026년 보유기간, 2027년 보유(절반)와 거주 중 큰 쪽(한도 800만 원), 2028년부터 거주기간 기준(한도 600만 원). 재산세 중복분을 빼고 농어촌특별세 20%를 더했습니다. 세부담 상한은 반영하지 않았습니다.</li>
       <li>나이는 2026년에 입력한 만 나이에서 해마다 1살씩 더합니다. 종부세 고령자 세액공제(만 60세 20%, 65세 30%, 70세 40%)는 개편안에서도 유지된다고 보고, 보유·거주 세액공제와 합쳐 최대 80%, 2027년 800만 원·2028년부터 600만 원 한도 안에서 적용했습니다. 양도세에는 나이에 따른 공제가 없습니다.</li>
       <li>세법 가정 패널의 값을 바꾸면 위 설명의 숫자 대신 그 값으로 계산합니다. "현행 유지"는 개편안이 통과되지 않아 지금 제도(보유 4%·거주 4%, 한도 없음, 종부세 공제 12억·공정시장가액비율 60%·현행 세율)가 계속된다고 가정합니다.</li>
-      <li>전세·월세는 참고용 별도 표입니다. 전세는 보증금 × 은행 이자율(선택 시 이자소득세 15.4% 차감)을, 월세는 월세 × 12개월을 그해 순현금 증가로 보고 시작 연도부터 매도 연도까지 더합니다. 보증금 자체는 돌려줄 돈이라 순현금에 넣지 않았고, 임대소득세와 중개수수료도 반영하지 않았습니다.</li>
+      <li>전세·월세는 참고용 별도 표입니다. 전세는 (받을 보증금 − 내가 살 집 전세금) × 은행 이자율(선택 시 이자소득세 15.4% 차감)을, 내 전세금이 더 크면 모자란 돈만큼 이자를 못 받는 것으로 보고 마이너스로, 월세는 월세 × 12개월을 그해 순현금 증가로 보고 시작 연도부터 매도 연도까지 더합니다. 보증금 자체는 돌려줄 돈이라 순현금에 넣지 않았고, 임대소득세와 중개수수료도 반영하지 않았습니다.</li>
       <li>손익C는 원래 요청의 "종부세·양도세"를 보유세(재산세+종부세)로 해석했습니다. 양도세는 이미 손익A에서 빠졌기 때문입니다.</li>
     </ul>
   </details>
@@ -259,7 +260,7 @@ const PLAN = { r_s1: 2028, r_s2: 2029, r_h0: 4, r_r0: 4, r_h1: 2, r_r1: 6, r_h2:
 const NOW = { r_s1: 9999, r_s2: 9999, r_h0: 4, r_r0: 4, r_h1: 4, r_r1: 4, r_h2: 4, r_r2: 4, r_max: 80, r_noNonres: false,
   r_cap1: 0, r_cap2: 0, r_exempt: 12, r_bigBasic: 250, r_cpt: "current", r_cptRes: 12, r_cptNon: 12, r_fmv: 60, r_cc27: 0, r_cc28: 0 };
 const RULE_KEYS = Object.keys(PLAN);
-const RENT_DEFAULTS = { j_on: true, j_dep: 12, j_from: 2027, j_to: 2027, j_rate: 3, j_tax: false,
+const RENT_DEFAULTS = { j_on: true, j_dep: 12, j_my: 8, j_from: 2027, j_to: 2027, j_rate: 3, j_tax: false,
   w_on: true, w_dep: 2, w_rent: 500, w_from: 2027, w_to: 2027 };
 const DEFAULTS = { buy: 10, sell: 30, growth: 0, loan: 4, rate: 6, acq: 2016, movein: 2028, ratio: 69, age: 57, req2: false, ...PLAN, ...RENT_DEFAULTS };
 const CHECKS = ["req2", "r_noNonres", "j_on", "j_tax", "w_on"];
@@ -347,13 +348,16 @@ function capFor(y, s) {
 
 /* ---------- 전세·월세 (참고용) ---------- */
 function rentFor(y, s) {
-  const jAnnual = s.j_dep * EOK * s.j_rate / 100 * (s.j_tax ? 1 - 0.154 : 1);
+  const jNet = (s.j_dep - s.j_my) * EOK; // 받은 보증금에서 내 전세금을 내고 남는 돈
+  const jGross = jNet * s.j_rate / 100;
+  const jAnnual = jGross > 0 && s.j_tax ? jGross * (1 - 0.154) : jGross; // 모자라면 그만큼 이자를 못 받는 셈(마이너스)
   const wAnnual = s.w_rent * 12;
   const inJ = s.j_on && y >= s.j_from && y <= s.j_to;
   const inW = s.w_on && y >= s.w_from && y <= s.w_to;
   const years = (on, from, to) => (on ? Math.max(0, Math.min(to, y) - from + 1) : 0);
   return {
-    jDep: inJ ? s.j_dep * EOK : 0, jRate: inJ ? s.j_rate : 0, jYear: inJ ? jAnnual : 0,
+    jDep: inJ ? s.j_dep * EOK : 0, jMy: inJ ? s.j_my * EOK : 0, jNet: inJ ? jNet : 0,
+    jRate: inJ ? s.j_rate : 0, jYear: inJ ? jAnnual : 0,
     jCum: jAnnual * years(s.j_on, s.j_from, s.j_to),
     wDep: inW ? s.w_dep * EOK : 0, wRent: inW ? s.w_rent : 0, wYear: inW ? wAnnual : 0,
     wCum: wAnnual * years(s.w_on, s.w_from, s.w_to),
@@ -480,9 +484,11 @@ const ROWS = [
 
 const RENT_ROWS = [
   { sec: "전세" },
-  { k: "jDep", label: "전세 보증금 (그해)", f: "임대 기간인 해만 표시, 돌려줄 돈", money: true },
+  { k: "jDep", label: "받을 전세 보증금 (그해)", f: "임대 기간인 해만 표시, 돌려줄 돈", money: true },
+  { k: "jMy", label: "내가 살 집 전세금 (그해)", f: "나도 다른 곳에 전세로 들어갈 때", money: true },
+  { k: "jNet", label: "운용 금액", f: "받을 보증금 − 내가 살 집 전세금", money: true },
   { k: "jRate", label: "은행 이자율", fmt: (v) => (v ? v + "%" : "–") },
-  { k: "jYear", label: "전세 이자금액 (그해)", f: "보증금 × 이자율", money: true },
+  { k: "jYear", label: "전세 이자금액 (그해)", f: "운용 금액 × 이자율", money: true },
   { k: "jCum", label: "전세 순현금 증가 (누적)", f: "전세 시작부터 매도 연도까지", money: true, cls: "refsum" },
   { calc: (r) => r.pnlD + r.A - r.loan + r.jCum, label: "상환 후 순현금D + 전세 누적", money: true },
   { sec: "월세" },
@@ -575,7 +581,7 @@ function renderChart(res, best) {
 
 /* ---------- 입력·저장 ---------- */
 const FIELDS = ["buy", "sell", "growth", "loan", "rate", "acq", "movein", "ratio", "age", ...RULE_KEYS.filter((k) => k !== "r_noNonres"),
-  "j_dep", "j_from", "j_to", "j_rate", "w_dep", "w_rent", "w_from", "w_to"];
+  "j_dep", "j_my", "j_from", "j_to", "j_rate", "w_dep", "w_rent", "w_from", "w_to"];
 function readState() {
   const s = {};
   FIELDS.forEach((k) => {
