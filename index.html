@@ -247,7 +247,7 @@
       <li>종부세: 공제 2026년 12억, 2027년부터 거주 14억·비거주는 위에서 고른 값. 공정시장가액비율 2026년 60%, 2027년부터 70%. 세율은 2026년 현행(최고 2.7%), 2027년 중간 단계(최고 3.5%), 2028년부터 가액 기준 일원화(최고 5%). 1주택 세액공제는 2026년 보유기간, 2027년 보유(절반)와 거주 중 큰 쪽(한도 800만 원), 2028년부터 거주기간 기준(한도 600만 원). 재산세 중복분을 빼고 농어촌특별세 20%를 더했습니다. 세부담 상한은 반영하지 않았습니다.</li>
       <li>나이는 2026년에 입력한 만 나이에서 해마다 1살씩 더합니다. 종부세 고령자 세액공제(만 60세 20%, 65세 30%, 70세 40%)는 개편안에서도 유지된다고 보고, 보유·거주 세액공제와 합쳐 최대 80%, 2027년 800만 원·2028년부터 600만 원 한도 안에서 적용했습니다. 양도세에는 나이에 따른 공제가 없습니다.</li>
       <li>세법 가정 패널의 값을 바꾸면 위 설명의 숫자 대신 그 값으로 계산합니다. "현행 유지"는 개편안이 통과되지 않아 지금 제도(보유 4%·거주 4%, 한도 없음, 종부세 공제 12억·공정시장가액비율 60%·현행 세율)가 계속된다고 가정합니다.</li>
-      <li>전세·월세는 참고용 별도 표입니다. 전세는 (받을 보증금 − 내가 살 집 전세금) × 은행 이자율(선택 시 이자소득세 15.4% 차감)을, 내 전세금이 더 크면 모자란 돈만큼 이자를 못 받는 것으로 보고 마이너스로, 월세는 월세 × 12개월을 그해 순현금 증가로 보고 시작 연도부터 매도 연도까지 더합니다. 보증금 자체는 돌려줄 돈이라 순현금에 넣지 않았고, 임대소득세와 중개수수료도 반영하지 않았습니다.</li>
+      <li>전세·월세는 참고용 별도 표입니다. 전세는 (받을 보증금 − 내가 살 집 전세금) × 은행 이자율(선택 시 이자소득세 15.4% 차감)을, 내 전세금이 더 크면 모자란 돈만큼 이자를 못 받는 것으로 보고 마이너스로, 월세는 월세 × 12개월을 그해 순현금 증가로 보고 시작 연도부터 매도 연도까지 더합니다. 보증금 자체는 돌려줄 돈이라 순현금에 넣지 않았고, 임대소득세와 중개수수료도 반영하지 않았습니다. 세를 준 기간은 거주연수에서 빼고(종부세도 그 해는 비거주로) 양도세와 보유세를 따로 다시 계산해 참고 표에만 씁니다.</li>
       <li>손익C는 원래 요청의 "종부세·양도세"를 보유세(재산세+종부세)로 해석했습니다. 양도세는 이미 손익A에서 빠졌기 때문입니다.</li>
     </ul>
   </details>
@@ -260,8 +260,8 @@ const PLAN = { r_s1: 2028, r_s2: 2029, r_h0: 4, r_r0: 4, r_h1: 2, r_r1: 6, r_h2:
 const NOW = { r_s1: 9999, r_s2: 9999, r_h0: 4, r_r0: 4, r_h1: 4, r_r1: 4, r_h2: 4, r_r2: 4, r_max: 80, r_noNonres: false,
   r_cap1: 0, r_cap2: 0, r_exempt: 12, r_bigBasic: 250, r_cpt: "current", r_cptRes: 12, r_cptNon: 12, r_fmv: 60, r_cc27: 0, r_cc28: 0 };
 const RULE_KEYS = Object.keys(PLAN);
-const RENT_DEFAULTS = { j_on: true, j_dep: 12, j_my: 8, j_from: 2027, j_to: 2027, j_rate: 3, j_tax: false,
-  w_on: true, w_dep: 2, w_rent: 500, w_from: 2027, w_to: 2027 };
+const RENT_DEFAULTS = { j_on: true, j_dep: 12, j_my: 8, j_from: 2031, j_to: 2033, j_rate: 3, j_tax: false,
+  w_on: true, w_dep: 2, w_rent: 500, w_from: 2031, w_to: 2033 };
 const DEFAULTS = { buy: 10, sell: 30, growth: 0, loan: 4, rate: 6, acq: 2016, movein: 2028, ratio: 69, age: 57, req2: false, ...PLAN, ...RENT_DEFAULTS };
 const CHECKS = ["req2", "r_noNonres", "j_on", "j_tax", "w_on"];
 const YEARS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036, 2037];
@@ -365,12 +365,15 @@ function rentFor(y, s) {
 }
 
 /* ---------- 연도별 계산 ---------- */
-function simulate(s) {
+// away: 세를 주느라 살지 않는 연도들 (없으면 입주 후 계속 거주)
+function simulate(s, away = new Set()) {
   const A = s.buy * EOK;
+  const livedUpTo = (t) => { let n = 0; for (let k = s.movein; k <= t; k++) if (!away.has(k)) n++; return n; };
+  const livesIn = (t) => t >= s.movein && !away.has(t);
   return YEARS.map((y) => {
     const B = s.sell * EOK * Math.pow(1 + s.growth / 100, y - 2026);
     const hold = y - s.acq;
-    const resid = Math.max(0, y - s.movein + 1);
+    const resid = livedUpTo(y);
     const exempt = hold >= 2 && (!s.req2 || resid >= 2);
     const gain = B - A;
     let C;
@@ -396,13 +399,13 @@ function simulate(s) {
     for (let ty = COST_START; ty <= y; ty++) {
       const V = s.sell * EOK * Math.pow(1 + s.growth / 100, ty - 2026);
       const P = V * s.ratio / 100;
-      const resNow = ty >= s.movein;
-      const residNow = Math.max(0, ty - s.movein + 1);
+      const resNow = livesIn(ty);
+      const residNow = livedUpTo(ty);
       prop += propertyTax(P).total;
       comp += comprehensiveTax(ty, P, resNow, ty - s.acq, residNow, s).tax;
     }
     const Py = B * s.ratio / 100;
-    const cy = comprehensiveTax(y, Py, y >= s.movein, hold, resid, s);
+    const cy = comprehensiveTax(y, Py, livesIn(y), hold, resid, s);
     const pnlA = gain - t.total;
     const pnlAn = gain - tn.total;
     return {
@@ -490,13 +493,23 @@ const RENT_ROWS = [
   { k: "jRate", label: "은행 이자율", fmt: (v) => (v ? v + "%" : "–") },
   { k: "jYear", label: "전세 이자금액 (그해)", f: "운용 금액 × 이자율", money: true },
   { k: "jCum", label: "전세 순현금 증가 (누적)", f: "전세 시작부터 매도 연도까지", money: true, cls: "refsum" },
-  { calc: (r) => r.pnlD + r.A - r.loan + r.jCum, label: "상환 후 순현금D + 전세 누적", money: true },
+  { calc: (r) => r.jSim.resid, label: "거주연수 (전세 기간 제외)", f: "세 준 동안은 거주로 안 셈", fmt: (v) => v + "년", cls: "hl3" },
+  { calc: (r) => r.jSim.E, label: "적용 공제율 (전세 반영)", fmt: (v) => v + "%" },
+  { calc: (r) => r.jSim.cgt, label: "양도세 합계 (전세 반영, 한도 적용)", money: true, cls: "hl2" },
+  { calc: (r) => r.jSim.cgtN, label: "양도세 합계 (전세 반영, 한도 없음)", money: true },
+  { calc: (r) => r.jSim.pnlD + r.A - r.loan + r.jCum, label: "상환 후 순현금D + 전세 누적 (한도 적용)", f: "전세 반영 세금 기준", money: true, cls: "hl1" },
+  { calc: (r) => r.jSim.pnlDN + r.A - r.loan + r.jCum, label: "상환 후 순현금D + 전세 누적 (한도 없음)", f: "전세 반영 세금 기준", money: true },
   { sec: "월세" },
   { k: "wDep", label: "월세 보증금 (그해)", f: "임대 기간인 해만 표시, 돌려줄 돈", money: true },
   { k: "wRent", label: "월세 (한 달)", money: true },
   { k: "wYear", label: "월세 수입 (그해)", f: "월세 × 12개월", money: true },
   { k: "wCum", label: "월세 순현금 증가 (누적)", f: "월세 시작부터 매도 연도까지", money: true, cls: "refsum" },
-  { calc: (r) => r.pnlD + r.A - r.loan + r.wCum, label: "상환 후 순현금D + 월세 누적", money: true },
+  { calc: (r) => r.wSim.resid, label: "거주연수 (월세 기간 제외)", f: "세 준 동안은 거주로 안 셈", fmt: (v) => v + "년", cls: "hl3" },
+  { calc: (r) => r.wSim.E, label: "적용 공제율 (월세 반영)", fmt: (v) => v + "%" },
+  { calc: (r) => r.wSim.cgt, label: "양도세 합계 (월세 반영, 한도 적용)", money: true, cls: "hl2" },
+  { calc: (r) => r.wSim.cgtN, label: "양도세 합계 (월세 반영, 한도 없음)", money: true },
+  { calc: (r) => r.wSim.pnlD + r.A - r.loan + r.wCum, label: "상환 후 순현금D + 월세 누적 (한도 적용)", f: "월세 반영 세금 기준", money: true, cls: "hl1" },
+  { calc: (r) => r.wSim.pnlDN + r.A - r.loan + r.wCum, label: "상환 후 순현금D + 월세 누적 (한도 없음)", f: "월세 반영 세금 기준", money: true },
 ];
 
 function renderTable(res, best, id = "sheet", rows = ROWS) {
@@ -620,14 +633,18 @@ function renderRent(s, res, best) {
     const inJ = i < RENT_ROWS.findIndex((x) => x.sec === "월세");
     return inJ ? s.j_on : s.w_on;
   });
-  renderTable(res, best, "rentSheet", rows);
+  const yearsSet = (from, to) => { const set = new Set(); for (let k = from; k <= to; k++) set.add(k); return set; };
+  const simJ = s.j_on ? simulate(s, yearsSet(s.j_from, s.j_to)) : null;
+  const simW = s.w_on ? simulate(s, yearsSet(s.w_from, s.w_to)) : null;
+  const withSims = res.map((r, i) => ({ ...r, jSim: simJ ? simJ[i] : r, wSim: simW ? simW[i] : r }));
+  renderTable(withSims, best, "rentSheet", rows);
   const overlaps = [];
   if (s.j_on && s.j_to >= s.movein) overlaps.push(`전세(${s.j_from}~${s.j_to}년)`);
   if (s.w_on && s.w_to >= s.movein) overlaps.push(`월세(${s.w_from}~${s.w_to}년)`);
   const warn = document.getElementById("rentWarn");
   warn.hidden = !overlaps.length;
   warn.textContent = overlaps.length
-    ? `${overlaps.join(", ")} 기간이 입주(${s.movein}년) 이후와 겹칩니다. 실제로는 그동안 거주할 수 없어 거주연수와 장특공제가 줄어드는데, 위 손익 계산에는 반영되지 않았습니다.`
+    ? `${overlaps.join(", ")} 동안은 거주하지 않는 것으로 보고, 이 표의 거주연수·장특공제·종부세를 다시 계산했습니다. 위 기본 표는 입주 후 계속 거주한다는 가정 그대로입니다.`
     : "";
 }
 
