@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>언제 팔아야 남을까 · 양도세 매도시점 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f5f6f3; --sheet: #ffffff; --ink: #1a2b3c; --muted: #66707c; --rule: #dde1e4; --rule-strong: #1a2b3c;
+    --hl1: #0e7c66; --hl1-bg: #dcf1ea;
+    --hl2: #a5650f; --hl2-bg: #fbecd2;
+    --hl3: #4b4bc4; --hl3-bg: #e6e6fb;
+    --best: #0e7c66; --neg: #c2353b; --focus: #2f6fd6;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #11161b; --sheet: #182028; --ink: #e5eaef; --muted: #96a0ac; --rule: #2a3440; --rule-strong: #c9d2db;
+      --hl1: #4fd1b0; --hl1-bg: #123a32; --hl2: #f0b25a; --hl2-bg: #3d2c12; --hl3: #a3a3ff; --hl3-bg: #26264d;
+      --best: #4fd1b0; --neg: #ff7a80; --focus: #7fb0ff; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #11161b; --sheet: #182028; --ink: #e5eaef; --muted: #96a0ac; --rule: #2a3440; --rule-strong: #c9d2db;
+    --hl1: #4fd1b0; --hl1-bg: #123a32; --hl2: #f0b25a; --hl2-bg: #3d2c12; --hl3: #a3a3ff; --hl3-bg: #26264d;
+    --best: #4fd1b0; --neg: #ff7a80; --focus: #7fb0ff; color-scheme: dark;
+  }
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-variant-numeric: tabular-nums; line-height: 1.5; }
+  main { max-width: 78rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+  .answer { max-width: 46rem; }
+  .answer p { margin: 0; color: var(--muted); font-size: .9375rem; }
+  .answer h1 { font-weight: 300; font-size: clamp(1.75rem, 4.6vw, 2.75rem); line-height: 1.25; letter-spacing: -0.02em; margin: .35rem 0 .5rem; }
+  .answer h1 b { font-weight: 600; color: var(--hl1); }
+  .answer .sub { font-size: .9375rem; }
+  .lawalert { margin-top: 1rem; background: var(--hl2-bg); color: var(--hl2); border-left: 3px solid var(--hl2); padding: .8rem 1rem; font-size: .875rem; line-height: 1.6; }
+  .lawalert ul { margin: .35rem 0 0; padding-left: 1.1rem; }
+  .lawalert a { color: inherit; }
+  .back { margin-top: .75rem !important; font-size: .8125rem; }
+  .back a { color: var(--muted); }
+  .answer .cond { margin-top: .6rem; font-size: .8125rem; color: var(--ink); background: var(--hl1-bg); display: inline-block; padding: .25rem .6rem; border-radius: .25rem; transition: background-color .6s; }
+  .answer .cond.flash { background: var(--hl2-bg); }
+  .answer h1 { transition: color .6s; }
+  .answer h1.flash b { color: var(--hl2); }
+
+  .layout { display: grid; grid-template-columns: 17rem 1fr; gap: 1.5rem; margin-top: 2rem; align-items: start; }
+  @media (max-width: 60rem) { .layout { grid-template-columns: 1fr; } }
+
+  form.controls { background: var(--sheet); border-top: 3px solid var(--rule-strong); padding: 1rem 1rem 1.25rem; }
+  .controls h2 { font-size: .9375rem; font-weight: 600; margin: 0 0 .75rem; }
+  .controls h3 { font-size: .8125rem; font-weight: 600; color: var(--muted); margin: 1.1rem 0 .4rem; }
+  .field { display: grid; grid-template-columns: 1fr 6.5rem; align-items: center; gap: .5rem; margin: .4rem 0; font-size: .875rem; }
+  .field input, .field select {
+    font: inherit; font-size: .875rem; width: 100%; padding: .35rem .5rem; border: 1px solid var(--rule); border-radius: .25rem;
+    background: var(--paper); color: var(--ink); text-align: right;
+  }
+  .field select { text-align: left; }
+  .field .unit { color: var(--muted); font-size: .75rem; }
+  .check { display: flex; gap: .5rem; align-items: flex-start; font-size: .8125rem; margin: .6rem 0; }
+  .check input { margin-top: .2rem; }
+  details.rules { margin-top: 1.25rem; border-top: 1px solid var(--rule); padding-top: .75rem; }
+  details.rules summary { font-size: .9375rem; font-weight: 600; cursor: pointer; }
+  details.rules .status { font-size: .75rem; color: var(--muted); margin: .35rem 0 .5rem; }
+  details.rules .status b { color: var(--hl2); font-weight: 600; }
+  details.rules .presets { display: flex; gap: .4rem; flex-wrap: wrap; margin: .5rem 0; }
+  details.rules .hint { font-size: .75rem; color: var(--muted); margin: .25rem 0 .5rem; line-height: 1.55; }
+  .pair { display: grid; grid-template-columns: 1fr 3.6rem 3.6rem; gap: .35rem; align-items: center; font-size: .8125rem; margin: .3rem 0; }
+  .pair input { font: inherit; font-size: .8125rem; width: 100%; padding: .3rem .35rem; border: 1px solid var(--rule); border-radius: .25rem; background: var(--paper); color: var(--ink); text-align: right; }
+  .pair.head { color: var(--muted); font-size: .6875rem; margin-bottom: 0; }
+  .pair.head span { text-align: right; }
+  .row-btns { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+  button { font: inherit; font-size: .8125rem; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); padding: .4rem .75rem; border-radius: .25rem; cursor: pointer; }
+  button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .chartbox { background: var(--sheet); border-top: 3px solid var(--rule-strong); padding: 1rem 1rem .5rem; }
+  .chartbox h2, .tablehead h2 { font-size: .9375rem; font-weight: 600; margin: 0; }
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .75rem; color: var(--muted); margin: .35rem 0 .5rem; }
+  .legend i { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; vertical-align: -1px; margin-right: .3rem; }
+  #chart svg { display: block; width: 100%; height: auto; }
+
+  .tablehead { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin: 1.75rem 0 .5rem; flex-wrap: wrap; }
+  .tablehead p { margin: .2rem 0 0; font-size: .8125rem; color: var(--muted); }
+  .scroll { overflow: auto; max-height: 78vh; max-height: 78dvh; background: var(--sheet); border-top: 3px solid var(--rule-strong); }
+  thead th { box-shadow: inset 0 -2px 0 var(--rule-strong); }
+  thead th.bestcol { box-shadow: inset 2px 0 0 var(--best), inset -2px 0 0 var(--best), inset 0 -2px 0 var(--rule-strong); }
+  table { border-collapse: collapse; width: 100%; font-size: .8125rem; }
+  th, td { padding: .42rem .6rem; border-bottom: 1px solid var(--rule); white-space: nowrap; text-align: right; }
+  thead th { font-weight: 600; position: sticky; top: 0; background: var(--sheet); z-index: 1; vertical-align: bottom; }
+  thead th small { display: block; font-weight: 400; color: var(--muted); font-size: .6875rem; }
+  th.label { text-align: left; position: sticky; left: 0; background: var(--sheet); z-index: 2; font-weight: 400; min-width: 12.5rem; }
+  thead th.label { z-index: 3; }
+  th.label .f { display: block; color: var(--muted); font-size: .6875rem; }
+  tr.section th { text-align: left; font-weight: 600; font-size: .75rem; color: var(--muted); background: var(--paper); position: sticky; left: 0; padding-top: .8rem; }
+  tr.section td { background: var(--paper); }
+  tr.hl1 th.label, tr.hl1 td { background: var(--hl1-bg); color: var(--hl1); font-weight: 600; }
+  tr.hl2 th.label, tr.hl2 td { background: var(--hl2-bg); color: var(--hl2); font-weight: 600; }
+  tr.hl3 th.label, tr.hl3 td { background: var(--hl3-bg); color: var(--hl3); font-weight: 600; }
+  td.neg { color: var(--neg); }
+  td.bind { color: var(--hl2); font-weight: 600; }
+  tr.cash th.label { padding-left: 1.5rem; }
+  tr.cash:not(.hl1) td, tr.cash:not(.hl1) th.label { color: var(--muted); }
+  tr.cash.hl1 td, tr.cash.hl1 th.label { font-weight: 400; }
+  .bestcol { box-shadow: inset 2px 0 0 var(--best), inset -2px 0 0 var(--best); }
+  thead th.bestcol { color: var(--best); }
+  thead th.bestcol::after { content: "최대"; display: block; font-size: .6875rem; font-weight: 600; }
+  tr:last-child td.bestcol { box-shadow: inset 2px 0 0 var(--best), inset -2px 0 0 var(--best), inset 0 -2px 0 var(--best); }
+
+  details.notes { margin-top: 2rem; background: var(--sheet); border-top: 3px solid var(--rule-strong); padding: 1rem 1.1rem; font-size: .875rem; max-width: 60rem; }
+  details.notes summary { font-weight: 600; cursor: pointer; }
+  details.notes li { margin: .35rem 0; line-height: 1.65; }
+  .warn { margin-top: 1rem; font-size: .8125rem; color: var(--muted); max-width: 60rem; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="answer" aria-live="polite">
+    <p id="lawline">정부 개편안(국회 심의 중) 기준 · 지금부터 매도할 때까지 드는 비용 포함</p>
+    <h1 id="headline">계산 중입니다</h1>
+    <p class="sub" id="subline"></p>
+    <p class="cond" id="cond"></p>
+    <div class="lawalert" id="lawalert" hidden></div>
+  </section>
+
+  <div class="layout">
+    <form class="controls" id="controls" onsubmit="return false">
+      <h2>내 상황 넣기</h2>
+      <h3>집값</h3>
+      <label class="field">매수가<span><input id="buy" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+      <label class="field">매도가 (2026년 기준)<span><input id="sell" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+      <label class="field">매도가 연 상승률<span><input id="growth" type="number" step="0.5" inputmode="decimal"> <span class="unit">%</span></span></label>
+      <h3>대출</h3>
+      <label class="field">대출액<span><input id="loan" type="number" step="0.5" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+      <label class="field">연 이자율<span><input id="rate" type="number" step="0.1" min="0" inputmode="decimal"> <span class="unit">%</span></span></label>
+      <h3>보유·거주</h3>
+      <label class="field">취득 연도<span><input id="acq" type="number" step="1" inputmode="numeric"></span></label>
+      <label class="field">입주(거주 시작) 연도<span><input id="movein" type="number" step="1" inputmode="numeric"></span></label>
+      <h3>보유세 가정</h3>
+      <label class="field">공시가격 ÷ 시세<span><input id="ratio" type="number" step="1" min="0" max="100" inputmode="numeric"> <span class="unit">%</span></span></label>
+      <label class="field">2026년 현재 나이<span><input id="age" type="number" step="1" min="0" max="120" inputmode="numeric"> <span class="unit">만 세</span></span></label>
+      <label class="check"><input id="req2" type="checkbox"><span>취득 당시 조정대상지역이라 비과세에 2년 거주가 필요함</span></label>
+
+      <details class="rules" id="rules">
+        <summary>세법 가정 (국회 결과에 맞춰 수정)</summary>
+        <p class="status" id="ruleStatus"></p>
+        <div class="presets">
+          <button type="button" id="presetPlan">정부안 (2026.8.)</button>
+          <button type="button" id="presetNow">현행 유지 (개편 무산)</button>
+        </div>
+        <p class="hint">국회에서 숫자가 바뀌면 아래 값만 고치면 됩니다. 시행 연도가 1년 미뤄지면 두 연도에 1씩 더하세요.</p>
+        <h3>양도세 장특공제 시행 시기</h3>
+        <label class="field">1단계 (보유→거주 전환) 시행<span><input id="r_s1" type="number" step="1" inputmode="numeric"> <span class="unit">년</span></span></label>
+        <label class="field">2단계 (거주 공제만) 시행<span><input id="r_s2" type="number" step="1" inputmode="numeric"> <span class="unit">년</span></span></label>
+        <h3>장특공제율 (1년당, 1세대 1주택·거주 2년 이상)</h3>
+        <div class="pair head"><span></span><span>보유</span><span>거주</span></div>
+        <div class="pair"><span>현행 (1단계 전)</span><input id="r_h0" type="number" step="0.5" aria-label="현행 보유 공제율"><input id="r_r0" type="number" step="0.5" aria-label="현행 거주 공제율"></div>
+        <div class="pair"><span>1단계</span><input id="r_h1" type="number" step="0.5" aria-label="1단계 보유 공제율"><input id="r_r1" type="number" step="0.5" aria-label="1단계 거주 공제율"></div>
+        <div class="pair"><span>2단계 이후</span><input id="r_h2" type="number" step="0.5" aria-label="2단계 보유 공제율"><input id="r_r2" type="number" step="0.5" aria-label="2단계 거주 공제율"></div>
+        <label class="field">최대 공제율<span><input id="r_max" type="number" step="1" inputmode="numeric"> <span class="unit">%</span></span></label>
+        <label class="check"><input id="r_noNonres" type="checkbox"><span>1단계부터 거주 2년 미만이면 장특공제 없음 (해제하면 일반 공제 연 2%, 최대 30%)</span></label>
+        <h3>장특공제 금액 한도 (0이면 한도 없음)</h3>
+        <label class="field">1단계 한도<span><input id="r_cap1" type="number" step="1" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+        <label class="field">2단계 이후 한도<span><input id="r_cap2" type="number" step="1" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+        <h3>양도세 기타</h3>
+        <label class="field">1주택 비과세 기준 (고가주택)<span><input id="r_exempt" type="number" step="1" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+        <label class="field">10년 거주 기본공제 (2027~)<span><input id="r_bigBasic" type="number" step="50" min="0" inputmode="numeric"> <span class="unit">만 원</span></span></label>
+        <h3>종부세 (2027년부터)</h3>
+        <label class="field">세율·세액공제 체계<span><select id="r_cpt"><option value="plan">정부안</option><option value="current">현행 유지</option></select></span></label>
+        <label class="field">거주 1주택 공제<span><input id="r_cptRes" type="number" step="1" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+        <label class="field">비거주 1주택 공제<span><input id="r_cptNon" type="number" step="1" min="0" inputmode="decimal"> <span class="unit">억 원</span></span></label>
+        <label class="field">공정시장가액비율<span><input id="r_fmv" type="number" step="1" min="0" max="100" inputmode="numeric"> <span class="unit">%</span></span></label>
+        <label class="field">세액공제 한도 2027년<span><input id="r_cc27" type="number" step="50" min="0" inputmode="numeric"> <span class="unit">만 원</span></span></label>
+        <label class="field">세액공제 한도 2028년~<span><input id="r_cc28" type="number" step="50" min="0" inputmode="numeric"> <span class="unit">만 원</span></span></label>
+      </details>
+      <div class="row-btns">
+        <button type="button" id="reset">처음 값으로</button>
+        <button type="button" id="unitBtn" aria-pressed="false">억 단위로 보기</button>
+      </div>
+    </form>
+
+    <div>
+      <section class="chartbox">
+        <h2>매도 연도별 최종 손익 (손익D)</h2>
+        <div class="legend"><span><i style="background:var(--hl1)"></i>개편안 (공제 한도 적용)</span><span><i style="background:var(--hl2)"></i>공제 한도가 없다면</span></div>
+        <div id="chart" role="img" aria-label="매도 연도별 최종 손익 그래프"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="tablehead">
+    <div>
+      <h2>연도별 상세 계산표</h2>
+      <p id="unitNote">단위: 만 원 · 연말에 매도한다고 가정</p>
+      <p>표 안에서 위아래·좌우로 넘기면 연도와 항목 이름이 고정되어 보입니다.</p>
+    </div>
+  </div>
+  <div class="scroll"><table id="sheet"></table></div>
+
+  <details class="notes">
+    <summary>계산 방식과 가정</summary>
+    <ul>
+      <li>양도차익 중 과세대상(C)은 1세대 1주택 고가주택 공식 (매도가 − 매수가) × (매도가 − 12억) ÷ 매도가를 씁니다. 필요경비(취득세·중개수수료 등)는 넣지 않았습니다. "2년 거주 필요"를 체크하면 거주 2년 전에는 비과세 없이 차익 전체가 과세됩니다.</li>
+      <li>장기보유공제율(E): 2027년까지는 거주 2년 이상이면 보유 연 4% + 거주 연 4%(각 최대 40%), 거주 2년 미만이면 일반 공제(보유 3년부터 연 2%, 최대 30%). 2028년은 보유 연 2% + 거주 연 6%, 2029년부터는 거주 연 8%(최대 80%)만 남고, 2028년부터 거주 2년 미만이면 공제가 없습니다.</li>
+      <li>공제 한도: 2027년까지 없음, 2028년 20억 원, 2029년부터 10억 원. 한도는 공제율을 고른 뒤의 공제액(C × E)에 걸립니다. 그래서 C × E가 한도를 넘는 해에만 과세표준이 늘어나고, 표 아래쪽 비교 묶음에서 늘어난 금액을 주황색으로 표시합니다.</li>
+      <li>기본공제는 250만 원이고, 2027년부터 10년 이상 거주했고 매도가 30억 원 이하면 2,500만 원입니다.</li>
+      <li>양도세 = 과세표준 × 세율 − 누진공제액(국세) + 지방소득세 10%.</li>
+      <li>각 손익 아래의 순현금은 손익에 매수가를 더한 금액이고, 상환 후 순현금은 거기서 대출 원금을 갚고 남는 금액입니다. 원금 상환은 비용이 아니라 손익은 그대로입니다.</li>
+      <li>손익A는 매도가 − 매수가 − 양도세입니다. 원래 요청의 "매도금액 − 산출세액"은 손익 기준으로 바꿔 계산했습니다.</li>
+      <li>이자와 보유세는 이미 낸 돈이 아니라 2027년부터 매도하는 해까지 앞으로 낼 돈만 더합니다. 그래서 2026년 매도는 비용이 0입니다. 매도는 6월 1일 이후라 그해 보유세도 냅니다.</li>
+      <li>거주연수는 입주 연도 1월에 들어가 매도 연도 12월에 판다고 보고 셉니다 (2028년 입주 → 2028년 매도 시 1년).</li>
+      <li>재산세: 공시가격 × 45%(1주택 특례 비율)에 누진세율, 도시지역분 0.14%, 지방교육세 20%를 더했습니다.</li>
+      <li>종부세: 공제 2026년 12억, 2027년부터 거주 14억·비거주는 위에서 고른 값. 공정시장가액비율 2026년 60%, 2027년부터 70%. 세율은 2026년 현행(최고 2.7%), 2027년 중간 단계(최고 3.5%), 2028년부터 가액 기준 일원화(최고 5%). 1주택 세액공제는 2026년 보유기간, 2027년 보유(절반)와 거주 중 큰 쪽(한도 800만 원), 2028년부터 거주기간 기준(한도 600만 원). 재산세 중복분을 빼고 농어촌특별세 20%를 더했습니다. 세부담 상한은 반영하지 않았습니다.</li>
+      <li>나이는 2026년에 입력한 만 나이에서 해마다 1살씩 더합니다. 종부세 고령자 세액공제(만 60세 20%, 65세 30%, 70세 40%)는 개편안에서도 유지된다고 보고, 보유·거주 세액공제와 합쳐 최대 80%, 2027년 800만 원·2028년부터 600만 원 한도 안에서 적용했습니다. 양도세에는 나이에 따른 공제가 없습니다.</li>
+      <li>세법 가정 패널의 값을 바꾸면 위 설명의 숫자 대신 그 값으로 계산합니다. "현행 유지"는 개편안이 통과되지 않아 지금 제도(보유 4%·거주 4%, 한도 없음, 종부세 공제 12억·공정시장가액비율 60%·현행 세율)가 계속된다고 가정합니다.</li>
+      <li>손익C는 원래 요청의 "종부세·양도세"를 보유세(재산세+종부세)로 해석했습니다. 양도세는 이미 손익A에서 빠졌기 때문입니다.</li>
+    </ul>
+  </details>
+  <p class="warn">기본값은 2026년 8월 발표된 정부 개편안입니다. 국회 심의에서 내용이 바뀌면 "세법 가정"에서 고쳐 쓰세요. 비거주 1주택 종부세 공제(9억/12억)처럼 보도마다 다른 항목도 있습니다. 실제 매도 결정 전에는 세무사와 확인하세요.</p>
+</main>
+
+<script>
+const PLAN = { r_s1: 2028, r_s2: 2029, r_h0: 4, r_r0: 4, r_h1: 2, r_r1: 6, r_h2: 0, r_r2: 8, r_max: 80, r_noNonres: true,
+  r_cap1: 20, r_cap2: 10, r_exempt: 12, r_bigBasic: 2500, r_cpt: "plan", r_cptRes: 14, r_cptNon: 12, r_fmv: 70, r_cc27: 800, r_cc28: 600 };
+const NOW = { r_s1: 9999, r_s2: 9999, r_h0: 4, r_r0: 4, r_h1: 4, r_r1: 4, r_h2: 4, r_r2: 4, r_max: 80, r_noNonres: false,
+  r_cap1: 0, r_cap2: 0, r_exempt: 12, r_bigBasic: 250, r_cpt: "current", r_cptRes: 12, r_cptNon: 12, r_fmv: 60, r_cc27: 0, r_cc28: 0 };
+const RULE_KEYS = Object.keys(PLAN);
+const DEFAULTS = { buy: 10, sell: 30, growth: 0, loan: 4, rate: 6, acq: 2016, movein: 2028, ratio: 69, age: 57, req2: false, ...PLAN };
+const YEARS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036, 2037];
+const COST_START = 2027;
+const EOK = 10000; // 1억 = 10,000만 원
+let unitEok = false;
+let lastSig = null;
+
+/* ---------- 세율표 (만 원) ---------- */
+const INCOME_TAX = [ // [상한, 세율%, 누진공제]
+  [1400, 6, 0], [5000, 15, 126], [8800, 24, 576], [15000, 35, 1544],
+  [30000, 38, 1994], [50000, 40, 2594], [100000, 42, 3594], [Infinity, 45, 6594]];
+function incomeTax(base) {
+  if (base <= 0) return { tax: 0, rate: 0, ded: 0 };
+  const b = INCOME_TAX.find((r) => base <= r[0]);
+  return { tax: base * b[1] / 100 - b[2], rate: b[1], ded: b[2] };
+}
+const CPT_BR = [30000, 60000, 120000, 250000, 500000, 940000, Infinity];
+const CPT_RATES = { 2026: [0.5, 0.7, 1.0, 1.3, 1.5, 2.0, 2.7], 2027: [0.5, 0.7, 1.3, 1.5, 2.0, 2.7, 3.5], 2028: [0.5, 0.7, 1.3, 2, 3, 4, 5] };
+function progressive(base, rates) {
+  let tax = 0, prev = 0;
+  for (let i = 0; i < CPT_BR.length && base > prev; i++) {
+    tax += (Math.min(base, CPT_BR[i]) - prev) * rates[i] / 100;
+    prev = CPT_BR[i];
+  }
+  return tax;
+}
+function propertyTaxBase(p) { return p * 0.45; }
+function propertyTax(p) { // 공시가격 p → { main, total }
+  const b = propertyTaxBase(p);
+  let main;
+  if (b <= 6000) main = b * 0.001;
+  else if (b <= 15000) main = 6 + (b - 6000) * 0.0015;
+  else if (b <= 30000) main = 19.5 + (b - 15000) * 0.0025;
+  else main = 57 + (b - 30000) * 0.004;
+  return { main, total: main * 1.2 + b * 0.0014 };
+}
+function holdCreditRate(y) { return y >= 15 ? 50 : y >= 10 ? 40 : y >= 5 ? 20 : 0; }
+
+function ageCreditRate(age) { return age >= 70 ? 40 : age >= 65 ? 30 : age >= 60 ? 20 : 0; }
+
+// t년 6월 1일 기준 종부세 → { tax, age, ageRate, stayRate }
+function comprehensiveTax(t, p, resident, holdYears, residYears, s) {
+  const age = s.age + (t - 2026);
+  const ageRate = ageCreditRate(age);
+  const plan = t >= 2027 && s.r_cpt === "plan";
+  const capOf = (v) => (v > 0 ? v : Infinity);
+  let stayRate, cap = Infinity;
+  if (!plan) stayRate = holdCreditRate(holdYears);
+  else if (t === 2027) { stayRate = Math.max(holdCreditRate(holdYears) / 2, holdCreditRate(residYears)); cap = capOf(s.r_cc27); }
+  else { stayRate = holdCreditRate(residYears); cap = capOf(s.r_cc28); }
+  const out = { tax: 0, age, ageRate, stayRate };
+  const ded = t <= 2026 ? 120000 : (resident ? s.r_cptRes : s.r_cptNon) * EOK;
+  const fmv = t <= 2026 ? 0.6 : s.r_fmv / 100;
+  const base = Math.max(0, p - ded) * fmv;
+  if (base <= 0) return out;
+  const rates = plan ? CPT_RATES[Math.min(t, 2028)] : CPT_RATES[2026];
+  let tax = progressive(base, rates);
+  const prop = propertyTax(p);
+  const overlap = Math.min(prop.main, base * 0.45 * 0.004);
+  tax = Math.max(0, tax - overlap);
+  const credit = Math.min(tax * Math.min(stayRate + ageRate, 80) / 100, cap);
+  out.tax = (tax - credit) * 1.2;
+  return out;
+}
+
+/* ---------- 장기보유(거주)공제율 ---------- */
+function stageOf(y, s) { return y >= s.r_s2 ? 2 : y >= s.r_s1 ? 1 : 0; }
+function ltcgRate(y, hold, resid, s) {
+  if (hold < 3) return 0;
+  const st = stageOf(y, s);
+  if (resid >= 2) {
+    const h = [s.r_h0, s.r_h1, s.r_h2][st], r = [s.r_r0, s.r_r1, s.r_r2][st];
+    return Math.min(Math.min(hold, 10) * h + Math.min(resid, 10) * r, s.r_max);
+  }
+  if (st > 0 && s.r_noNonres) return 0;
+  return Math.min(Math.min(hold, 15) * 2, 30);
+}
+function capFor(y, s) {
+  const st = stageOf(y, s);
+  const v = st === 0 ? 0 : st === 1 ? s.r_cap1 : s.r_cap2;
+  return v > 0 ? v * EOK : Infinity;
+}
+
+/* ---------- 연도별 계산 ---------- */
+function simulate(s) {
+  const A = s.buy * EOK;
+  return YEARS.map((y) => {
+    const B = s.sell * EOK * Math.pow(1 + s.growth / 100, y - 2026);
+    const hold = y - s.acq;
+    const resid = Math.max(0, y - s.movein + 1);
+    const exempt = hold >= 2 && (!s.req2 || resid >= 2);
+    const gain = B - A;
+    let C;
+    if (gain <= 0) C = 0;
+    else if (exempt) C = B <= s.r_exempt * EOK ? 0 : gain * (B - s.r_exempt * EOK) / B;
+    else C = gain;
+    const E = ltcgRate(y, hold, resid, s);
+    const Draw = C * E / 100;
+    const cap = capFor(y, s);
+    const D = Math.min(Draw, cap);
+    const basic = C <= 0 ? 0 : (y >= 2027 && resid >= 10 && B <= 30 * EOK ? Math.max(250, s.r_bigBasic) : 250);
+    const taxOf = (ded) => {
+      const F = Math.max(0, C - ded - basic);
+      const it = incomeTax(F);
+      return { F, ...it, local: it.tax * 0.1, total: it.tax * 1.1 };
+    };
+    const t = taxOf(D);
+    const tn = taxOf(Draw);
+
+    const costYears = Math.max(0, y - COST_START + 1);
+    const interest = s.loan * EOK * s.rate / 100 * costYears;
+    let prop = 0, comp = 0;
+    for (let ty = COST_START; ty <= y; ty++) {
+      const V = s.sell * EOK * Math.pow(1 + s.growth / 100, ty - 2026);
+      const P = V * s.ratio / 100;
+      const resNow = ty >= s.movein;
+      const residNow = Math.max(0, ty - s.movein + 1);
+      prop += propertyTax(P).total;
+      comp += comprehensiveTax(ty, P, resNow, ty - s.acq, residNow, s).tax;
+    }
+    const Py = B * s.ratio / 100;
+    const cy = comprehensiveTax(y, Py, y >= s.movein, hold, resid, s);
+    const pnlA = gain - t.total;
+    const pnlAn = gain - tn.total;
+    return {
+      y, label: y < s.movein ? `${y} 미거주` : String(y), hold, resid, E, cap, A, B, gain, C, Draw, D, basic,
+      age: cy.age, ageRate: cy.ageRate, stayRate: cy.stayRate, propY: propertyTax(Py).total, compY: cy.tax,
+      intY: s.loan * EOK * s.rate / 100,
+      F: t.F, rate: t.rate, ded: t.ded, tax: t.tax, local: t.local, cgt: t.total,
+      loan: s.loan * EOK, interest, prop, comp, holding: prop + comp,
+      pnlA, pnlB: pnlA - interest, pnlC: pnlA - prop - comp, pnlD: pnlA - interest - prop - comp,
+      cgtN: tn.total, pnlDN: pnlAn - interest - prop - comp, capCost: t.total - tn.total,
+      FN: tn.F, rateN: tn.rate, taxN: tn.tax, capCut: Draw - D, fUp: t.F - tn.F,
+    };
+  });
+}
+
+/* ---------- 표 ---------- */
+const money = (v) => unitEok ? (v / EOK).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(v).toLocaleString("ko-KR");
+const ROWS = [
+  { sec: "보유·거주" },
+  { k: "resid", label: "거주연수", f: "입주 연도부터 매도 연도까지", fmt: (v) => v + "년", cls: "hl3" },
+  { k: "hold", label: "보유연수", f: "매도 연도 − 취득 연도", fmt: (v) => v + "년" },
+  { k: "age", label: "나이 (만)", f: "그해 6월 1일 기준", fmt: (v) => v + "세" },
+  { sec: "양도세 계산" },
+  { k: "cap", label: "공제 한도 (Cap)", f: "세법 가정의 단계별 한도", fmt: (v) => v === Infinity ? "없음" : money(v) },
+  { k: "E", label: "적용 공제율 (E)", fmt: (v) => v + "%" },
+  { k: "A", label: "매수가 (A)", money: true },
+  { k: "B", label: "매도가 (B)", money: true },
+  { k: "C", label: "과세대상금액 (C)", f: "(B − A) × (B − 12억) ÷ B", money: true },
+  { k: "Draw", label: "공제율 적용 공제액", f: "C × E", money: true },
+  { k: "D", label: "장기보유(거주)공제 (D)", f: "한도 적용 후", money: true },
+  { k: "basic", label: "기본공제", money: true },
+  { k: "F", label: "과세표준 (F)", f: "C − D − 기본공제", money: true },
+  { k: "rate", label: "적용 세율", fmt: (v) => v + "%" },
+  { k: "ded", label: "누진공제액", money: true },
+  { k: "tax", label: "산출세액", f: "F × 세율 − 누진공제", money: true },
+  { k: "local", label: "지방소득세", f: "산출세액 × 10%", money: true },
+  { k: "cgt", label: "양도세 합계", money: true, cls: "hl2" },
+  { sec: "그해 보유세와 이자 (6월 1일 기준)" },
+  { k: "ageRate", label: "고령자 세액공제율", f: "만 60세 20%, 65세 30%, 70세 40%", fmt: (v) => v + "%" },
+  { k: "stayRate", label: "보유·거주 세액공제율", f: "2026 보유, 2027 큰 쪽, 2028~ 거주", fmt: (v) => v + "%" },
+  { k: "propY", label: "그해 재산세", money: true },
+  { k: "compY", label: "그해 종부세", f: "세액공제 합 최대 80%, 금액 한도 적용", money: true },
+  { k: "intY", label: "그해 이자", money: true },
+  { sec: "손익" },
+  { k: "pnlA", label: "손익A", f: "매도가 − 매수가 − 양도세", money: true },
+  { calc: (r) => r.pnlA + r.A, label: "순현금A", f: "손익A + 매수가", money: true, cls: "cash" },
+  { calc: (r) => r.pnlA + r.A - r.loan, label: "상환 후 순현금A", f: "순현금A − 대출금액", money: true, cls: "cash" },
+  { k: "loan", label: "대출금액", money: true },
+  { k: "interest", label: "이자 (누적)", f: "2027년부터 매도 연도까지", money: true },
+  { k: "pnlB", label: "손익B", f: "손익A − 이자", money: true },
+  { calc: (r) => r.pnlB + r.A, label: "순현금B", f: "손익B + 매수가", money: true, cls: "cash" },
+  { calc: (r) => r.pnlB + r.A - r.loan, label: "상환 후 순현금B", f: "순현금B − 대출금액", money: true, cls: "cash" },
+  { k: "comp", label: "종부세 (누적)", f: "농특세 포함", money: true },
+  { k: "prop", label: "재산세 (누적)", f: "도시지역분·지방교육세 포함", money: true },
+  { k: "pnlC", label: "손익C", f: "손익A − 종부세 − 재산세", money: true },
+  { calc: (r) => r.pnlC + r.A, label: "순현금C", f: "손익C + 매수가", money: true, cls: "cash" },
+  { calc: (r) => r.pnlC + r.A - r.loan, label: "상환 후 순현금C", f: "순현금C − 대출금액", money: true, cls: "cash" },
+  { k: "pnlD", label: "손익D (최종)", f: "손익A − 이자 − 종부세 − 재산세", money: true, cls: "hl1" },
+  { calc: (r) => r.pnlD + r.A, label: "순현금D (최종)", f: "손익D + 매수가", money: true, cls: "hl1 cash" },
+  { calc: (r) => r.pnlD + r.A - r.loan, label: "상환 후 순현금D (최종)", f: "순현금D − 대출금액", money: true, cls: "hl1 cash" },
+  { sec: "공제 한도 적용 전·후 비교" },
+  { k: "Draw", label: "장특공제액 (한도 없음)", f: "C × E", money: true },
+  { k: "D", label: "장특공제액 (한도 적용)", f: "min(C × E, 한도)", money: true },
+  { k: "capCut", label: "한도로 줄어든 공제액", money: true, bind: true },
+  { k: "FN", label: "과세표준 (한도 없음)", f: "C − C×E − 기본공제", money: true },
+  { k: "F", label: "과세표준 (한도 적용)", f: "C − 한도 적용 공제 − 기본공제", money: true },
+  { k: "fUp", label: "늘어난 과세표준", money: true, bind: true },
+  { calc: (r) => r.rateN === r.rate ? r.rate + "%" : `${r.rateN}% → ${r.rate}%`, label: "적용 세율 (없음 → 적용)", fmt: (v) => v },
+  { k: "taxN", label: "산출세액 (한도 없음)", money: true },
+  { k: "tax", label: "산출세액 (한도 적용)", money: true },
+  { k: "cgtN", label: "양도세 합계 (한도 없음)", f: "지방소득세 포함", money: true },
+  { k: "cgt", label: "양도세 합계 (한도 적용)", f: "지방소득세 포함", money: true },
+  { k: "capCost", label: "한도 때문에 늘어난 세금", money: true, bind: true },
+  { k: "pnlDN", label: "손익D (한도 없음)", money: true },
+  { calc: (r) => r.pnlDN + r.A, label: "순현금D (한도 없음)", f: "손익D(한도 없음) + 매수가", money: true, cls: "cash" },
+  { calc: (r) => r.pnlDN + r.A - r.loan, label: "상환 후 순현금D (한도 없음)", f: "순현금D(한도 없음) − 대출금액", money: true, cls: "cash" },
+];
+
+function renderTable(res, best) {
+  const tbl = document.getElementById("sheet");
+  tbl.textContent = "";
+  const thead = tbl.createTHead();
+  const hr = thead.insertRow();
+  const corner = document.createElement("th");
+  corner.className = "label";
+  corner.textContent = "항목";
+  hr.append(corner);
+  res.forEach((r, i) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = r.label;
+    if (i === best) th.className = "bestcol";
+    hr.append(th);
+  });
+  const tb = tbl.createTBody();
+  ROWS.forEach((row) => {
+    const tr = tb.insertRow();
+    if (row.sec) {
+      tr.className = "section";
+      const th = document.createElement("th");
+      th.textContent = row.sec;
+      th.scope = "rowgroup";
+      tr.append(th);
+      res.forEach((_, i) => { const td = tr.insertCell(); if (i === best) td.className = "bestcol"; });
+      return;
+    }
+    if (row.cls) tr.className = row.cls;
+    const th = document.createElement("th");
+    th.className = "label";
+    th.scope = "row";
+    th.textContent = row.label;
+    if (row.f) { const f = document.createElement("span"); f.className = "f"; f.textContent = row.f; th.append(f); }
+    tr.append(th);
+    res.forEach((r, i) => {
+      const v = row.calc ? row.calc(r) : r[row.k];
+      const td = tr.insertCell();
+      td.textContent = row.money ? money(v) : row.fmt(v);
+      const c = [];
+      if (row.money && v < 0) c.push("neg");
+      if (row.bind && v > 0.5) c.push("bind");
+      if (i === best) c.push("bestcol");
+      td.className = c.join(" ");
+    });
+  });
+}
+
+/* ---------- 그래프 ---------- */
+function renderChart(res, best) {
+  const W = 760, H = 280, L = 64, R = 12, T = 18, Bm = 40;
+  const vals = res.flatMap((r) => [r.pnlD, r.pnlDN]);
+  let max = Math.max(...vals, 0), min = Math.min(...vals, 0);
+  const pad = (max - min) * 0.08 || 1; max += pad; if (min < 0) min -= pad;
+  const x = (i) => L + (i + 0.5) * (W - L - R) / res.length;
+  const y = (v) => T + (max - v) / (max - min) * (H - T - Bm);
+  const bw = (W - L - R) / res.length * 0.56;
+  const ticks = 5, step = (max - min) / ticks;
+  let g = "";
+  for (let i = 0; i <= ticks; i++) {
+    const v = min + step * i;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" />`;
+    g += `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${(v / EOK).toFixed(1)}억</text>`;
+  }
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" />`;
+  res.forEach((r, i) => {
+    const top = Math.min(y(r.pnlD), y(0)), h = Math.abs(y(r.pnlD) - y(0));
+    g += `<rect x="${x(i) - bw / 2}" y="${top}" width="${bw}" height="${Math.max(h, 1)}" rx="2" fill="var(--hl1)" opacity="${i === best ? 1 : 0.55}"><title>${r.label} 손익D ${money(r.pnlD)}${unitEok ? "억" : "만"} 원</title></rect>`;
+    const lbl = r.label.replace(" 미거주", "");
+    g += `<text x="${x(i)}" y="${H - Bm + 16}" text-anchor="middle" font-size="11" fill="var(--ink)">${lbl}</text>`;
+    if (r.label.includes("미거주")) g += `<text x="${x(i)}" y="${H - Bm + 30}" text-anchor="middle" font-size="10" fill="var(--muted)">미거주</text>`;
+  });
+  const path = res.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(r.pnlDN).toFixed(1)).join(" ");
+  g += `<path d="${path}" fill="none" stroke="var(--hl2)" stroke-width="2" stroke-dasharray="5 4" />`;
+  res.forEach((r, i) => { g += `<circle cx="${x(i)}" cy="${y(r.pnlDN)}" r="3" fill="var(--hl2)"><title>${r.label} 한도 없을 때 ${money(r.pnlDN)}</title></circle>`; });
+  const b = res[best];
+  g += `<text x="${x(best)}" y="${y(b.pnlD) - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--hl1)">${(b.pnlD / EOK).toFixed(2)}억</text>`;
+  document.getElementById("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+}
+
+/* ---------- 입력·저장 ---------- */
+const FIELDS = ["buy", "sell", "growth", "loan", "rate", "acq", "movein", "ratio", "age", ...RULE_KEYS.filter((k) => k !== "r_noNonres")];
+function readState() {
+  const s = {};
+  FIELDS.forEach((k) => {
+    const el = document.getElementById(k);
+    s[k] = el.tagName === "SELECT" ? el.value : Number(el.value);
+    if (el.tagName !== "SELECT" && !Number.isFinite(s[k])) s[k] = DEFAULTS[k];
+  });
+  s.req2 = document.getElementById("req2").checked;
+  s.r_noNonres = document.getElementById("r_noNonres").checked;
+  return s;
+}
+function writeState(s) {
+  FIELDS.forEach((k) => (document.getElementById(k).value = s[k]));
+  document.getElementById("req2").checked = !!s.req2;
+  document.getElementById("r_noNonres").checked = !!s.r_noNonres;
+}
+function ruleMode(s) {
+  const same = (P) => RULE_KEYS.every((k) => String(s[k]) === String(P[k]));
+  return same(PLAN) ? "정부안 (2026.8.)" : same(NOW) ? "현행 유지 (개편 무산)" : "직접 수정한 세법";
+}
+function applyPreset(P) {
+  const s = { ...readState(), ...P };
+  writeState(s);
+  update();
+}
+function save(s) { try { localStorage.setItem("yangdo-sim-v2", JSON.stringify(s)); } catch (e) {} }
+function load() {
+  try { const v = JSON.parse(localStorage.getItem("yangdo-sim-v2")); if (v) return { ...DEFAULTS, ...v }; } catch (e) {}
+  return { ...DEFAULTS };
+}
+
+function update() {
+  const s = readState();
+  save(s);
+  const res = simulate(s);
+  let best = 0;
+  res.forEach((r, i) => { if (r.pnlD > res[best].pnlD) best = i; });
+  const b = res[best];
+  const worst = res.reduce((a, r) => (r.pnlD < a.pnlD ? r : a), res[0]);
+  document.getElementById("headline").innerHTML =
+    `<b>${b.label.replace(" 미거주", "년 미거주 상태")}${b.label.includes("미거주") ? "" : "년"}</b>에 팔면 최종 손익이 가장 큽니다: ${(b.pnlD / EOK).toFixed(2)}억 원`;
+  const capBind = res.filter((r) => r.capCost > 1);
+  document.getElementById("subline").textContent =
+    `가장 불리한 해(${worst.label})보다 ${((b.pnlD - worst.pnlD) / EOK).toFixed(2)}억 원 많습니다. 그해 양도세는 ${(b.cgt / EOK).toFixed(2)}억 원, 거주 ${b.resid}년입니다. ` +
+    (capBind.length ? `공제 한도 때문에 세금이 늘어나는 해가 ${capBind.length}개 있습니다.` : "지금 조건에서는 공제 한도(10억·20억)에 걸리지 않습니다.");
+  renderChart(res, best);
+  renderTable(res, best);
+  const mode = ruleMode(s);
+  document.getElementById("lawline").textContent = `세법 가정: ${mode}${mode.startsWith("정부안") ? " · 국회 심의 중" : ""} · 지금부터 매도할 때까지 드는 비용 포함`;
+  const capTxt = (v) => (v > 0 ? `${v}억` : "없음");
+  const stTxt = (y) => (y >= 9999 ? "시행 안 함" : `${y}년`);
+  document.getElementById("ruleStatus").innerHTML = "";
+  const st = document.getElementById("ruleStatus");
+  const b1 = document.createElement("b"); b1.textContent = mode;
+  st.append("지금 적용 중: ", b1, ` · 1단계 ${stTxt(s.r_s1)}, 2단계 ${stTxt(s.r_s2)}, 한도 ${capTxt(s.r_cap1)} → ${capTxt(s.r_cap2)}`);
+  const eok = (v) => (Math.round(v * 100) / 100).toLocaleString("ko-KR");
+  const cond = document.getElementById("cond");
+  cond.textContent = `계산 조건: 매수 ${eok(s.buy)}억, 매도 ${eok(s.sell)}억${s.growth ? ` (연 ${s.growth}% 상승)` : ""}, 대출 ${eok(s.loan)}억 연 ${s.rate}%, ${s.acq}년 취득, ${s.movein}년 입주, 2026년 만 ${s.age}세, 세법 ${mode}`;
+  const sig = JSON.stringify(s);
+  if (lastSig && sig !== lastSig) {
+    const h = document.getElementById("headline");
+    [h, cond].forEach((el) => { el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 700); });
+  }
+  lastSig = sig;
+}
+
+document.getElementById("controls").addEventListener("input", update);
+document.getElementById("controls").addEventListener("change", update);
+document.getElementById("reset").addEventListener("click", () => { writeState(DEFAULTS); update(); });
+document.getElementById("presetPlan").addEventListener("click", () => applyPreset(PLAN));
+document.getElementById("presetNow").addEventListener("click", () => applyPreset(NOW));
+document.getElementById("unitBtn").addEventListener("click", (e) => {
+  unitEok = !unitEok;
+  e.currentTarget.setAttribute("aria-pressed", String(unitEok));
+  e.currentTarget.textContent = unitEok ? "만 원 단위로 보기" : "억 단위로 보기";
+  document.getElementById("unitNote").textContent = `단위: ${unitEok ? "억 원" : "만 원"} · 연말에 매도한다고 가정`;
+  update();
+});
+writeState(load());
+update();
+
+/* 시세 대시보드(market-board)의 개편안 감시 결과가 있으면 안내 표시 (같은 github.io 주소라 읽을 수 있음) */
+(async () => {
+  try {
+    const r = await fetch("/market-board/data/law_watch.json?t=" + Date.now());
+    if (!r.ok) return;
+    const alerts = ((await r.json()).alerts || []).slice().reverse();
+    if (!alerts.length) return;
+    const box = document.getElementById("lawalert");
+    const p = document.createElement("p");
+    p.style.margin = "0";
+    const b = document.createElement("strong");
+    b.textContent = "개편안에 변화가 있을 수 있어요. ";
+    p.append(b, "최근 2주 안에 국회 통과·수정 관련 기사가 감지됐습니다. 내용이 바뀌었다면 아래 '세법 가정'을 고치거나, 기사를 Claude 채팅에 붙여넣어 업데이트를 요청하세요.");
+    const ul = document.createElement("ul");
+    alerts.slice(0, 5).forEach((a) => {
+      const li = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = a.link; link.target = "_blank"; link.rel = "noopener"; link.textContent = a.title;
+      li.append(`[${a.kind}] `, link, ` (${a.source}, ${a.published.slice(0, 10)})`);
+      ul.append(li);
+    });
+    box.append(p, ul);
+    box.hidden = false;
+  } catch (e) { /* 감시 파일이 없으면 조용히 넘어감 */ }
+})();
+</script>
+</body>
+</html>
